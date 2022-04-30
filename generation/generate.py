@@ -1,4 +1,5 @@
 import gtsam
+import math
 import numpy as np
 
 from random import random
@@ -10,6 +11,7 @@ class SnapdragonParser:
         self.data   = SnapdragonParser.load_data(filename)
         self.index  = 0
 
+        self.first_position = SnapdragonParser.get_position(self.data[0])
         self.current_time   = 0
         self.dt             = dt
 
@@ -32,24 +34,28 @@ class SnapdragonParser:
         return gtsam.Rot3(w, x, y, z)
 
     ###########################################################################
-    def get_pose(self):
+    def get_state(self):
         while self.index < len(self.data):
             measurement = self.data[self.index]
             time        = SnapdragonParser.get_time(measurement)
+            self.index += 1
 
             if time < self.current_time + self.dt:
                 continue
 
-            # construct pose from measurement
+            # construct pose from groundtruth
             position    = SnapdragonParser.get_position(measurement)
             rotation    = SnapdragonParser.get_rotation(measurement)
-            pose        = gtsam.Pose3(rotation, position)
+
+            # centralize position
+            position = position - self.first_position
+
+            pose = gtsam.Pose3(rotation, position)
 
             # update parser
             self.current_time = time
-            self.index += 1
 
-            return pose
+            return time, pose
 
         # No measurements left
         return None
@@ -97,13 +103,67 @@ class PointCloud:
         with open(filename, 'w') as f:
             f.write('\n'.join(map(PointCloud.point_to_str, self.points)))
 
+    ###########################################################################
+    def get_points(self):
+        return self.points
+
 
 ###############################################################################
 def main():
-    parser = SnapdragonParser('data/groundtruth.txt', 30/1)
+    parser = SnapdragonParser('data/groundtruth.txt', 1/10)
 
     points = PointCloud('data/walls.csv')
     points.store('data/output_points.csv')
+
+    pose_index  = 0
+    groundtruth = []
+
+    # camera
+    calibration = gtsam.Cal3_S2Stereo(420.0, 420.0, 0.0, 320.0, 240, 0.2)
+    width       = 600
+    height      = 480
+    seen        = []
+    projections = []
+
+
+    while True:
+        measurement = parser.get_state()
+
+        if measurement is None:
+            break
+
+        # groundtruth
+        time, pose  = measurement
+        coordinates = pose.translation()
+
+        groundtruth.append(pose.translation())
+
+        # projection
+        normalize = gtsam.Rot3.RzRyRx(-math.pi/2, 0, -math.pi/2)
+        camera_pose = gtsam.Pose3(pose.rotation() * normalize, coordinates)
+        camera = gtsam.StereoCamera(camera_pose, calibration)
+
+        for point_id, point in enumerate(points.get_points()):
+            try:
+                projection = camera.project(point)
+
+                # check if projection is inside view
+                if not (0 <= projection.uL() <= width
+                        and 0 <= projection.uR() <= width
+                        and 0 <= projection.v() <= height):
+                    continue
+
+                seen.append([pose_index, point_id])
+            except:
+                continue
+
+        pose_index += 1
+
+    with open('data/output_positions.csv', 'w') as f:
+        f.write('\n'.join(map(PointCloud.point_to_str, groundtruth)))
+
+    with open('data/output_seen.csv', 'w') as f:
+        f.write('\n'.join(map(PointCloud.point_to_str, seen)))
 
 
 ###############################################################################
