@@ -154,6 +154,7 @@ def main():
                     continue
 
                 seen.append([pose_index, point_id])
+                projections.append([time, point_id, *projection.vector()])
             except:
                 continue
 
@@ -165,6 +166,8 @@ def main():
     with open('data/output_seen.csv', 'w') as f:
         f.write('\n'.join(map(PointCloud.point_to_str, seen)))
 
+    with open('data/output_projections.csv', 'w') as f:
+        f.write('\n'.join(map(PointCloud.point_to_str, projections)))
 
 ###############################################################################
 if __name__ == '__main__':

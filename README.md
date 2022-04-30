@@ -46,6 +46,12 @@ which have to be placed in `data` folder.
   * second integer represents the line number of the point that was seen by
     the camera (from `output_points.csv`)
 
+### Output projections
+ - `output_projections.csv` contains all generated measurements
+ - data are four decimal numbers:
+  * first is timestamp in second based on groundtruth time used for simulation
+  * last three are values from stereo projection in gtsam (uL, uR, v)
+
 -------------------------------------------------------------------------------
 
 ## Scripts
