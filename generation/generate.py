@@ -119,6 +119,7 @@ def main():
     groundtruth = []
 
     # camera
+    # TODO: create config
     calibration = gtsam.Cal3_S2Stereo(420.0, 420.0, 0.0, 320.0, 240, 0.2)
     width       = 600
     height      = 480
@@ -136,7 +137,7 @@ def main():
         time, pose  = measurement
         coordinates = pose.translation()
 
-        groundtruth.append(pose.translation())
+        groundtruth.append([*pose.translation(), *pose.rotation().quaternion()])
 
         # projection
         normalize = gtsam.Rot3.RzRyRx(-math.pi/2, 0, -math.pi/2)
@@ -146,6 +147,13 @@ def main():
         for point_id, point in enumerate(points.get_points()):
             try:
                 projection = camera.project(point)
+
+                # add noise
+                ul += random() * 2 - 1
+                uR += random() * 2 - 1
+                v += random() * 2 - 1
+
+                projection = gtsam.StereoPoint2(uL, uR, v)
 
                 # check if projection is inside view
                 if not (0 <= projection.uL() <= width
@@ -168,6 +176,7 @@ def main():
 
     with open('data/output_projections.csv', 'w') as f:
         f.write('\n'.join(map(PointCloud.point_to_str, projections)))
+
 
 ###############################################################################
 if __name__ == '__main__':
