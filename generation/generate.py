@@ -149,9 +149,9 @@ def main():
                 projection = camera.project(point)
 
                 # add noise
-                ul += random() * 2 - 1
-                uR += random() * 2 - 1
-                v += random() * 2 - 1
+                uL  = projection.uL() + random() * 2 - 1
+                uR  = projection.uR() + random() * 2 - 1
+                v   = projection.v() + random() * 2 - 1
 
                 projection = gtsam.StereoPoint2(uL, uR, v)
 
