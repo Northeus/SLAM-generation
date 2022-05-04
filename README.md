@@ -57,7 +57,3 @@ which have to be placed in `data` folder.
 ## Scripts
  - `. scripts/run.sh` generate data
 
--------------------------------------------------------------------------------
-
-## TODO
- - Split `generation.py` into multiple files.
