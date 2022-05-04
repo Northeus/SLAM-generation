@@ -60,4 +60,4 @@ which have to be placed in `data` folder.
 -------------------------------------------------------------------------------
 
 ## TODO
- - Split `publisher.py` into multiple files.
+ - Split `generation.py` into multiple files.
