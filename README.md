@@ -10,6 +10,16 @@ which have to be placed in `data` folder.
 
 -------------------------------------------------------------------------------
 
+## Camera calibration
+ - both camera calibrations (mono and stereo) use same intrinsic:
+   * fx, fy = 420, 420
+   * skew = 0
+   * u0, v0 = 320, 240
+ - baseline (stereo) = 0.2
+
+
+-------------------------------------------------------------------------------
+
 ## Data files
  - files stored in `data` folder used for generation
 
@@ -39,7 +49,7 @@ which have to be placed in `data` folder.
  - data are three decimal numbers representing coordinates separated with space
 
 ### Output seen
- - `output_seen.csv` contains visible positions
+ - `output_seen_{mono|stereo}.csv` contains visible positions
  - data are two integers separated with space:
   * first integer represents the line number of the position used for testing,
     whether the camera sees the point (from `output_positions.csv`)
@@ -47,10 +57,10 @@ which have to be placed in `data` folder.
     the camera (from `output_points.csv`)
 
 ### Output projections
- - `output_projections.csv` contains all generated measurements
+ - `output_projections_{mono|stereo}.csv` contains all generated measurements
  - data are four decimal numbers:
   * first is timestamp in second based on groundtruth time used for simulation
-  * last three are values from stereo projection in gtsam (uL, uR, v)
+  * last values are from the projections in gtsam (x, y) | (uL, uR, v)
 
 -------------------------------------------------------------------------------
 

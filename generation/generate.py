@@ -1,10 +1,6 @@
 from environment import PointCloud
 from parser import SnapdragonParser
-
-import gtsam
-import math
-
-from random import random
+from camera import MonoCamera, StereoCamera
 
 
 ###############################################################################
@@ -26,6 +22,36 @@ def is_in_view(projection, width, height):
 
 
 ###############################################################################
+class CameraScenario:
+    def __init__(self, camera):
+        self.camera         = camera
+        self.seen           = []
+        self.projections    = []
+
+    ###########################################################################
+    def get_seen(self):
+        return self.seen
+
+    ###########################################################################
+    def get_projections(self):
+        return self.projections
+
+    ###########################################################################
+    def set_position(self, pose):
+        self.camera.set_position(pose)
+
+    ###########################################################################
+    def add_point(self, pose_index, point_id, time, point):
+        projection = self.camera.project(point, 1.0)
+
+        if projection is None:
+            return
+
+        self.seen.append([pose_index, point_id])
+        self.projections.append([time, point_id, *projection])
+
+
+###############################################################################
 def main():
     parser = SnapdragonParser('data/groundtruth.txt', 1/10)
 
@@ -34,12 +60,8 @@ def main():
     pose_index  = 0
     groundtruth = []
 
-    # camera
-    calibration = gtsam.Cal3_S2Stereo(420.0, 420.0, 0.0, 320.0, 240, 0.2)
-    width       = 600
-    height      = 480
-    seen        = []
-    projections = []
+    mono_scenario = CameraScenario(MonoCamera())
+    stereo_scenario = CameraScenario(StereoCamera())
 
     while True:
         measurement = parser.get_state()
@@ -54,36 +76,24 @@ def main():
         groundtruth.append([*pose.translation(), *pose.rotation().quaternion()])
 
         # projection with world coordinates
-        normalize = gtsam.Rot3.RzRyRx(-math.pi/2, 0, -math.pi/2)
-        camera_pose = gtsam.Pose3(pose.rotation() * normalize, coordinates)
-        camera = gtsam.StereoCamera(camera_pose, calibration)
+        mono_scenario.set_position(pose)
+        stereo_scenario.set_position(pose)
 
         for point_id, point in enumerate(points.get_points()):
-            # CheiralityException (point is behinde the camera)
-            try:
-                projection = camera.project(point)
-
-                # add noise
-                uL  = projection.uL() + random() * 2 - 1
-                uR  = projection.uR() + random() * 2 - 1
-                v   = projection.v() + random() * 2 - 1
-
-                projection = gtsam.StereoPoint2(uL, uR, v)
-
-                if not is_in_view(projection, width, height):
-                    continue
-
-                seen.append([pose_index, point_id])
-                projections.append([time, point_id, *projection.vector()])
-            except:
-                continue
+            mono_scenario.add_point(pose_index, point_id, time, point)
+            stereo_scenario.add_point(pose_index, point_id, time, point)
 
         pose_index += 1
 
     points.store('data/output_points.csv')
     store_data('data/output_positions.csv', groundtruth)
-    store_data('data/output_seen.csv', seen)
-    store_data('data/output_projections.csv', projections)
+    store_data('data/output_seen_mono.csv', mono_scenario.get_seen())
+    store_data(
+            'data/output_projections_mono.csv', mono_scenario.get_projections())
+    store_data('data/output_seen_stereo.csv', stereo_scenario.get_seen())
+    store_data(
+            'data/output_projections_stereo.csv',
+            stereo_scenario.get_projections())
 
 
 ###############################################################################
